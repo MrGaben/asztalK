@@ -4,7 +4,7 @@ class Szemely
 {
     private string nev;
     private string lak { get; set; }
-    private int[] szuletesiDatum { get; set; }
+    public int[] szuletesiDatum { get; set; }
 
     public Szemely(string nev)
     {
@@ -98,17 +98,21 @@ class Alkalmazott : Szemely
 
     public override string ToString()
     {
-        return base.ToString() + $", Beosztás: {beosztas}, Fizetés: {fizetes} Ft";
+        return $"{Nev}, Beosztás: {beosztas}, Fizetés: {fizetes} Ft";
     }
 
     public void FizetesEmeles(double emeles)
     {
-        fizetes += emeles;
+        if (fizetes > 299999)
+        {
+            fizetes += emeles;
+        }
     }
 
     public new int Kor()
     {
-        if (fizetes > 300000)
+        if (fizetes > 299999)
+
             return base.Kor() - 10;
         else
             return base.Kor();
@@ -128,8 +132,18 @@ class Program
         int ev = int.Parse(Console.ReadLine());
         Console.Write("Születési hónap: ");
         int honap = int.Parse(Console.ReadLine());
+        while(honap > 12)
+        {
+            Console.Write("Születési hónap: ");
+            honap = int.Parse(Console.ReadLine());
+        }
         Console.Write("Születési nap: ");
         int nap = int.Parse(Console.ReadLine());
+        while(nap > 31)
+        {
+            Console.Write("Születési nap: ");
+            nap = int.Parse(Console.ReadLine());
+        }
 
         int[] szuletesiDatum = { ev, honap, nap };
 
@@ -151,12 +165,12 @@ class Program
 
         Console.WriteLine("\nAlkalmazott adatok:");
         Console.WriteLine(alkalmazott);
-        Console.WriteLine($"Életkor: {szemely.Kor()} év");
-
+        
         Console.WriteLine("\nFizetésemelés (300000 Ft felett):");
         alkalmazott.FizetesEmeles(10000);
         Console.WriteLine($"Új fizetés: {alkalmazott.Fizetes} Ft");
-        Console.WriteLine($"Új életkor: {szemely.Kor()} év");
+        Console.WriteLine($"Életkor: {alkalmazott.Kor() - szemely.szuletesiDatum[0]} év");
+
 
         // Típuskényszerítés példa
         Szemely szemely2 = alkalmazott;
@@ -164,5 +178,6 @@ class Program
         Console.WriteLine(szemely2);
 
         Console.ReadLine();
+
     }
 }
