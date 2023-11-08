@@ -1,4 +1,9 @@
-﻿using System;
+﻿using pro;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using static Szemely;
+
 
 class Szemely
 {
@@ -66,42 +71,110 @@ class Szemely
         int ev = DateTime.Now.Year;
         return ev - szuletesiDatum[0];
     }
+
+    public class Vallalat
+    {
+        public Dictionary<int, List<Alkalmazott>> OsztalyonkentiAlkalmazottak { get; } = new Dictionary<int, List<Alkalmazott>>();
+        private static string[] beosztasok = { "Nyugdíjas", "Ács", "Faszállító", "Takarító" };
+        public void BelepAlkalmazott(int osztalyKod, Alkalmazott alkalmazott)
+        {
+            if (!OsztalyonkentiAlkalmazottak.ContainsKey(osztalyKod))
+            {
+                OsztalyonkentiAlkalmazottak[osztalyKod] = new List<Alkalmazott>();
+            }
+
+            OsztalyonkentiAlkalmazottak[osztalyKod].Add(alkalmazott);
+        }
+
+        public void KilepAlkalmazott(int osztalyKod, Alkalmazott alkalmazott)
+        {
+            if (OsztalyonkentiAlkalmazottak.ContainsKey(osztalyKod))
+            {
+                OsztalyonkentiAlkalmazottak[osztalyKod].Remove(alkalmazott);
+            }
+        }
+
+        public void ModositAlkalmazott(int osztalyKod, Alkalmazott regiAlkalmazott, Alkalmazott ujAlkalmazott)
+        {
+            if (OsztalyonkentiAlkalmazottak.ContainsKey(osztalyKod))
+            {
+                int index = OsztalyonkentiAlkalmazottak[osztalyKod].IndexOf(regiAlkalmazott);
+                if (index >= 0)
+                {
+                    OsztalyonkentiAlkalmazottak[osztalyKod][index] = ujAlkalmazott;
+                }
+            }
+        }
+
+        public void NyugdijbaMegy(int osztalyKod, Alkalmazott alkalmazott)
+        {
+            KilepAlkalmazott(osztalyKod, alkalmazott);
+        }
+
+        public void MentAlkalmazottak(string fajlnev)
+        {
+            try
+            {
+                using (StreamWriter file = new StreamWriter(fajlnev))
+                {
+                    foreach (var osztalyKod in OsztalyonkentiAlkalmazottak.Keys)
+                    {
+                        foreach (var alkalmazott in OsztalyonkentiAlkalmazottak[osztalyKod])
+                        {
+                            // Példa CSV formátumra: Név,Beosztás,Fizetés
+                            string sor = $"{alkalmazott.Nev},{Vallalat.beosztasok[alkalmazott.Beosztas]},{alkalmazott.fizetes}";
+                            file.WriteLine(sor);
+                        }
+                    }
+                }
+
+                Console.WriteLine("Az alkalmazottak sikeresen el lettek mentve a fájlba.");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Hiba a mentés során: {e.Message}");
+            }
+        }
+
+    }
+
+
 }
+
+
 
 class Alkalmazott : Szemely
 {
-    private string beosztas;
-    private double fizetes;
+    private static string[] beosztasok = { "Nyugdíjas", "Ács", "Faszállító", "Takarító" };
 
-    public Alkalmazott(string nev) : base(nev)
+    private int beosztas; // Beosztás kódja
+    public int fizetes { get; set; }
+    public int OsztalyKod { get; set; }
+
+    public Alkalmazott(string nev, int osztalyKod) : base(nev)
     {
-        this.beosztas = "";
-        this.fizetes = 0;
+        this.beosztas = osztalyKod; // Beosztás beállítása
+        this.OsztalyKod = osztalyKod;
     }
 
-    public Alkalmazott(string nev, string beosztas, double fizetes) : base(nev)
+    public Alkalmazott(string nev, int beosztas, int fizetes) : base(nev)
     {
         this.beosztas = beosztas;
         this.fizetes = fizetes;
     }
 
-    public double Fizetes
-    {
-        get { return fizetes; }
-        set { fizetes = value; }
-    }
-
-    public string Beosztas
+    public int Beosztas
     {
         get { return beosztas; }
+        set { beosztas = value; } // Beosztás kódjának beállítása
     }
 
     public override string ToString()
-    {
-        return $"{Nev}, Beosztás: {beosztas}, Fizetés: {fizetes} Ft";
-    }
+        {
+            return $"{Nev}, Beosztás: {beosztasok[beosztas]}, Fizetés: {fizetes} Ft"; // Beosztás frissítése
+        }
 
-    public void FizetesEmeles(double emeles)
+    public void FizetesEmeles(int emeles)
     {
         if (fizetes > 299999)
         {
@@ -117,12 +190,15 @@ class Alkalmazott : Szemely
         else
             return base.Kor();
     }
+
 }
 
 class Program
 {
     static void Main()
     {
+        Vallalat vallalat = new Vallalat();
+
         Console.WriteLine("Személy létrehozása:");
         Console.Write("Név: ");
         string nev = Console.ReadLine();
@@ -149,26 +225,54 @@ class Program
 
         Szemely szemely = new Szemely(nev, lakcim, szuletesiDatum);
 
-        Console.WriteLine("\nAlkalmazott létrehozása:");
+        Console.WriteLine("Alkalmazott létrehozása:");
         Console.Write("Név: ");
         nev = Console.ReadLine();
-        Console.Write("Beosztás: ");
-        string beosztas = Console.ReadLine();
         Console.Write("Fizetés: ");
-        double fizetes = double.Parse(Console.ReadLine());
+        int fizetes = Convert.ToInt32(Console.ReadLine());
+        int osztalyKod = 0;
+        Alkalmazott alkalmazott = new Alkalmazott(nev, osztalyKod, fizetes);
+        Console.WriteLine(alkalmazott.ToString());
+        while (osztalyKod == 0)
+        {
+            Console.WriteLine("1. Nyugdíjas\n2. Dolgozik");
+            int nyugdije = Convert.ToInt32(Console.ReadLine());
+            if (nyugdije == 1)
+            {
+                osztalyKod++;
+                vallalat.NyugdijbaMegy(osztalyKod, alkalmazott);
+                break;
+            }
+            Console.WriteLine("Beosztások:\n1. Ács\n2. Faszállító\n3. Takarító");
+            Console.Write("Válassz az alábbi beosztások közül: ");
+            osztalyKod = Convert.ToInt32(Console.ReadLine());
+            vallalat.BelepAlkalmazott(osztalyKod, alkalmazott);
 
-        Alkalmazott alkalmazott = new Alkalmazott(nev, beosztas, fizetes);
+            if (osztalyKod != 0)
+            {
+                Console.WriteLine("Biztos ezt a munkát akarja?");
+                Console.WriteLine("Igen\nNem");
+                string marad = Convert.ToString(Console.ReadLine());
+                if (marad == "Nem")
+                {
+                    osztalyKod = 0;
+                    vallalat.KilepAlkalmazott(osztalyKod, alkalmazott);
+                }
+            }
+        }
 
+        alkalmazott.Beosztas = osztalyKod;
         Console.WriteLine("\nSzemély adatok:");
         Console.WriteLine(szemely);
         Console.WriteLine($"Életkor: {szemely.Kor()} év");
+
+
 
         Console.WriteLine("\nAlkalmazott adatok:");
         Console.WriteLine(alkalmazott);
         
         Console.WriteLine("\nFizetésemelés (300000 Ft felett):");
-        alkalmazott.FizetesEmeles(10000);
-        Console.WriteLine($"Új fizetés: {alkalmazott.Fizetes} Ft");
+        Console.WriteLine($"Új fizetés: {alkalmazott.fizetes} Ft");
         Console.WriteLine($"Életkor: {alkalmazott.Kor() - szemely.szuletesiDatum[0]} év");
 
 
@@ -176,7 +280,7 @@ class Program
         Szemely szemely2 = alkalmazott;
         Console.WriteLine("\nTípuskényszerítés:");
         Console.WriteLine(szemely2);
-
+        vallalat.MentAlkalmazottak("alkalmazottak.csv");
         Console.ReadLine();
 
     }
